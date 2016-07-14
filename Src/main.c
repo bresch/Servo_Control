@@ -67,9 +67,12 @@ static void MX_I2C3_Init(void);
 static void MX_LTDC_Init(void);
 static void MX_SPI5_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_ADC1_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 static void setPWM(TIM_HandleTypeDef, uint32_t, uint16_t, uint16_t);
+
+ADC_HandleTypeDef hadc1;
 
 
 /* USER CODE BEGIN PFP */
@@ -104,6 +107,7 @@ int main(void)
   MX_LTDC_Init();
   MX_SPI5_Init();
   MX_TIM3_Init();
+  MX_ADC1_Init();
 
   /* USER CODE BEGIN 2 */
   BSP_LCD_Init();
@@ -117,17 +121,31 @@ int main(void)
   BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
   BSP_LCD_DisplayStringAtLine(1,(uint8_t*)"Hello World");
 
+  HAL_ADC_Start(&hadc1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   char str[20];
+  char strADC[20];
+  uint32_t ADCValue = 0;
   while (1)
   {
 	  for(int i=0; i<256; i++){
 	   setPWM(htim3, TIM_CHANNEL_1, 256, i);
 	   sprintf(str, "Duty cycle: %d %c", (int)(i*100/256), 37);
 	   BSP_LCD_DisplayStringAtLine(2,(uint8_t*)str);
+
+	   if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+	   {
+		   ADCValue = HAL_ADC_GetValue(&hadc1);
+	   }
+	   else
+	   {
+		   ADCValue = 0;
+	   }
+	   sprintf(strADC, "ADC1 Value: %d \r", (int)ADCValue);
+	   BSP_LCD_DisplayStringAtLine(3,(uint8_t*)strADC);
 	   HAL_Delay(100);
 	  }
 
@@ -391,6 +409,41 @@ uint16_t pulse)
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 	HAL_TIM_PWM_ConfigChannel(&timer, &sConfigOC, channel);
 	HAL_TIM_PWM_Start(&timer, channel); // start pwm generation
+}
+
+/* ADC1 init function */
+static void MX_ADC1_Init(void)
+{
+	ADC_ChannelConfTypeDef sConfig;
+
+	/**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+	*/
+	hadc1.Instance = ADC1;
+	hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+	hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+	hadc1.Init.ScanConvMode = DISABLE;
+	hadc1.Init.ContinuousConvMode = ENABLE;
+	hadc1.Init.DiscontinuousConvMode = DISABLE;
+	hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+	hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	hadc1.Init.NbrOfConversion = 1;
+	hadc1.Init.DMAContinuousRequests = ENABLE;
+	hadc1.Init.EOCSelection = DISABLE;
+	if (HAL_ADC_Init(&hadc1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	/**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+	*/
+	sConfig.Channel = ADC_CHANNEL_5;
+	sConfig.Rank = 1;
+	sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
 }
 
 /* FMC initialization function */
