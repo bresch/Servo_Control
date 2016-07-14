@@ -131,6 +131,7 @@ int main(void)
   uint32_t ADCValue = 0;
   while (1)
   {
+	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 	  for(int i=0; i<256; i++){
 	   setPWM(htim3, TIM_CHANNEL_1, 256, i);
 	   sprintf(str, "Duty cycle: %d %c", (int)(i*100/256), 37);
@@ -144,7 +145,7 @@ int main(void)
 	   {
 		   ADCValue = 0;
 	   }
-	   sprintf(strADC, "ADC1 Value: %d \r", (int)ADCValue);
+	   sprintf(strADC, "ADC1 Value: %d \n", (int)ADCValue);
 	   BSP_LCD_DisplayStringAtLine(3,(uint8_t*)strADC);
 	   HAL_Delay(100);
 	  }
@@ -518,6 +519,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, LD3_Pin|LD4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : NCS_MEMS_SPI_Pin CSX_Pin OTG_FS_PSO_Pin */
   GPIO_InitStruct.Pin = NCS_MEMS_SPI_Pin|CSX_Pin|OTG_FS_PSO_Pin;
@@ -584,6 +586,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB7 */
+	GPIO_InitStruct.Pin = GPIO_PIN_7;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
