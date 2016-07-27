@@ -129,26 +129,43 @@ int main(void)
   char str[20];
   char strADC[20];
   uint32_t ADCValue = 0;
+  uint16_t pwmValue = 0;
+  uint8_t dir = 0;
+
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_SET);
   while (1)
   {
-	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-	  for(int i=0; i<256; i++){
-	   setPWM(htim3, TIM_CHANNEL_1, 256, i);
-	   sprintf(str, "Duty cycle: %d %c", (int)(i*100/256), 37);
-	   BSP_LCD_DisplayStringAtLine(2,(uint8_t*)str);
 
-	   if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-	   {
-		   ADCValue = HAL_ADC_GetValue(&hadc1);
-	   }
-	   else
-	   {
-		   ADCValue = 0;
-	   }
-	   sprintf(strADC, "ADC1 Value: %d \n", (int)ADCValue);
-	   BSP_LCD_DisplayStringAtLine(3,(uint8_t*)strADC);
-	   HAL_Delay(100);
+	  BSP_LCD_DisplayStringAtLine(2,(uint8_t*)str);
+
+	  if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+	  {
+		  ADCValue = HAL_ADC_GetValue(&hadc1);
 	  }
+	  else
+	  {
+		  ADCValue = 0;
+	  }
+	  sprintf(strADC, "ADC1 Value: %d \n", (int)ADCValue);
+	  BSP_LCD_DisplayStringAtLine(3,(uint8_t*)strADC);
+
+	  if((ADCValue < 280) && (dir == 1))
+	  {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_SET);
+		  pwmValue = 256 - pwmValue;
+		  dir = 0;
+	  }
+	  else if((ADCValue > 3600) && (dir == 0))
+	  {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_RESET);
+		  pwmValue = 256 - pwmValue;
+		  dir = 1;
+	  }
+	  setPWM(htim3, TIM_CHANNEL_1, 256, pwmValue);
+	  sprintf(str, "Duty cycle: %d %c", (int)(pwmValue*100/256), 37);
+
+
+	   //HAL_Delay(100);
 
   /* USER CODE END WHILE */
 
