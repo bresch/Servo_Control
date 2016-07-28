@@ -30,67 +30,12 @@
   *
   ******************************************************************************
   */
-/* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "stm32f429i_discovery_lcd.h"
-#include "stm32f429i_discovery_gyroscope.h"
 
-/* USER CODE BEGIN Includes */
+#include "main.h"
 
-/* USER CODE END Includes */
-
-/* Private variables ---------------------------------------------------------*/
-DMA2D_HandleTypeDef hdma2d;
-
-I2C_HandleTypeDef hi2c3;
-
-LTDC_HandleTypeDef hltdc;
-
-SPI_HandleTypeDef hspi5;
-
-SDRAM_HandleTypeDef hsdram1;
-
-TIM_HandleTypeDef htim3;
-
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-void Error_Handler(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA2D_Init(void);
-static void MX_FMC_Init(void);
-static void MX_I2C3_Init(void);
-static void MX_LTDC_Init(void);
-static void MX_SPI5_Init(void);
-static void MX_TIM3_Init(void);
-static void MX_ADC1_Init(void);
-
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-static void setPWM(TIM_HandleTypeDef, uint32_t, uint16_t, uint16_t);
-
-ADC_HandleTypeDef hadc1;
-
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -124,31 +69,54 @@ int main(void)
   HAL_ADC_Start(&hadc1);
   /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  char str[20];
-  char strADC[20];
-  uint32_t ADCValue = 0;
-  uint16_t pwmValue = 0;
-  uint8_t dir = 0;
+  servo.angle = 0;
+  servo.setPoint = 1;
+  servo.speed = 0;
+  servo.adcValue = 0;
+  servo.pwmValue = 0;
+  servo.dir = CCW;
+
+  float uPot = 0;
+  float uMot = 0;
+  float kP = 1;
+  float e = 5;
+
 
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_SET);
   while (1)
   {
 
-	  BSP_LCD_DisplayStringAtLine(2,(uint8_t*)str);
-
 	  if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
 	  {
-		  ADCValue = HAL_ADC_GetValue(&hadc1);
+		  servo.adcValue = HAL_ADC_GetValue(&hadc1);
 	  }
-	  else
-	  {
-		  ADCValue = 0;
-	  }
-	  sprintf(strADC, "ADC1 Value: %d \n", (int)ADCValue);
+
+	  sprintf(strADC, "ADC1 Value: %d \n", (int)servo.adcValue);
 	  BSP_LCD_DisplayStringAtLine(3,(uint8_t*)strADC);
 
+	  uPot = ((float)servo.adcValue * 3.0)/4095.0;
+ 	  e = servo.setPoint - uPot;
+	  uMot = kP * e;
+
+	  if(uMot > 1)
+		  uMot = 1;
+	  else if(uMot < -1)
+		  uMot = -1;
+
+	  if(uMot > 0)
+	  {
+		  servo.pwmValue = 256 - (uMot*256);
+		  servo.dir = CCW;
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_SET);
+	  }
+	  else if(uMot < 0)
+	  {
+		  servo.pwmValue = -uMot*256;
+		  servo.dir = CW;
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_RESET);
+	  }
+
+/*
 	  if((ADCValue < 280) && (dir == 1))
 	  {
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,GPIO_PIN_SET);
@@ -161,13 +129,12 @@ int main(void)
 		  pwmValue = 256 - pwmValue;
 		  dir = 1;
 	  }
-	  setPWM(htim3, TIM_CHANNEL_1, 256, pwmValue);
-	  sprintf(str, "Duty cycle: %d %c", (int)(pwmValue*100/256), 37);
-
+	  */
+	  setPWM(htim3, TIM_CHANNEL_1, 256, servo.pwmValue);
+	  sprintf(str, "Duty cycle: %d %c", (int)(servo.pwmValue*100/256), 37);
+	  BSP_LCD_DisplayStringAtLine(2,(uint8_t*)str);
 
 	   //HAL_Delay(100);
-
-  /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 
